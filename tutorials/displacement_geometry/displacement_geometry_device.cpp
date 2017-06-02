@@ -41,7 +41,7 @@ __aligned(16) float cube_vertices[8][4] =
   { -1.0f,  1.0f,  1.0f, 0.0f }
 };
 
-#if 1
+#if 0
 
 #define NUM_INDICES 24
 #define NUM_FACES 6
@@ -104,20 +104,39 @@ float displacement_dv(const Vec3fa& P, const Vec3fa& dPdv)
 }
 
 void displacementFunction(void* ptr,
-                                   unsigned int geomID,
-                                   unsigned int primID,
-                                   unsigned int time,
-                                   const float* u,      /*!< u coordinates (source) */
-                                   const float* v,      /*!< v coordinates (source) */
-                                   const float* nx,     /*!< x coordinates of normal at point to displace (source) */
-                                   const float* ny,     /*!< y coordinates of normal at point to displace (source) */
-                                   const float* nz,     /*!< z coordinates of normal at point to displace (source) */
-                                   float* px,           /*!< x coordinates of points to displace (source and target) */
-                                   float* py,           /*!< y coordinates of points to displace (source and target) */
-                                   float* pz,           /*!< z coordinates of points to displace (source and target) */
-                                   size_t N)
+                          unsigned int geomID,
+                          unsigned int primID,
+                          unsigned int time,
+                          const float* u,      /*!< u coordinates (source) */
+                          const float* v,      /*!< v coordinates (source) */
+                          const float* nx,     /*!< x coordinates of normal at point to displace (source) */
+                          const float* ny,     /*!< y coordinates of normal at point to displace (source) */
+                          const float* nz,     /*!< z coordinates of normal at point to displace (source) */
+                          float* px,           /*!< x coordinates of points to displace (source and target) */
+                          float* py,           /*!< y coordinates of points to displace (source and target) */
+                          float* pz,           /*!< z coordinates of points to displace (source and target) */
+                          size_t N)
 {
+
   for (unsigned int i=0; i<N; i++) {
+
+    /* out of bounds test code */
+#if 1
+    Vec3fa diffuse = Vec3fa(1.0f,0.0f,0.0f);
+
+    const float U = *u;
+    const float V = *v;
+
+    const unsigned int l = (unsigned) floor(4.0f*U); //const float uu = 2.0f*frac(4.0f*U)-0.5f; 
+    const unsigned int h = (unsigned) floor(4.0f*V); //const float vv = 2.0f*frac(4.0f*V)-0.5f; 
+
+    const Vec2f base((float)l,(float)h);
+    //const Vec2f uv =  (1.0f/4.0f) * (base + 0.5f*(0.5f+Vec2f(1.1f,1.1f)));
+    const Vec2f uv =  (1.0f/4.0f) * (base + 0.5f*(0.5f+Vec2f(-0.1f,-0.1f)));
+
+    rtcInterpolate(g_scene,geomID,primID,uv.x,uv.y,RTC_VERTEX_BUFFER0,&diffuse.x,nullptr,nullptr,3);
+#endif
+    
     const Vec3fa P = Vec3fa(px[i],py[i],pz[i]);
     const Vec3fa Ng = Vec3fa(nx[i],ny[i],nz[i]);
     const Vec3fa dP = displacement(P)*Ng;
@@ -181,7 +200,7 @@ extern "C" void device_init (char* cfg)
   rtcDeviceSetErrorFunction2(g_device,error_handler,nullptr);
 
   /* create scene */
-  g_scene = rtcDeviceNewScene(g_device,RTC_SCENE_DYNAMIC | RTC_SCENE_ROBUST,RTC_INTERSECT1 | RTC_INTERPOLATE);
+  g_scene = rtcDeviceNewScene(g_device,RTC_SCENE_STATIC | RTC_SCENE_ROBUST,RTC_INTERSECT1 | RTC_INTERPOLATE);
 
   /* add ground plane */
   addGroundPlane(g_scene);
